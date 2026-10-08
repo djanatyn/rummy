@@ -178,10 +178,21 @@ impl Sequence {
                 .collect();
             let mut next: Vec<SequenceIteration> = vec![(vec![card.clone()], rest)];
 
+            // TODO: instead of cloning, keep track of indices
+            // keep track of a list of used indices instead of copying
+            // then just dereference indices whenever required for comparison
+
             while let Some((sequence, rest)) = next.pop() {
                 match &sequence[..] {
                     [one] => {
-                        todo!()
+                        for next_card in rest {
+                            if card.sequence(&next_card) {
+                                next.push((
+                                    vec![card.clone(), next_card],
+                                    todo!("the rest of the cards with the next_card removed"),
+                                ))
+                            }
+                        }
                     }
                     [begin, end] | [begin, .., end] => {
                         todo!()
@@ -199,15 +210,16 @@ impl Sequence {
             // starting state: next = [item=[card] rest=[rest of the cards]]
             //
             // example:
+            // --------
             // next = [
             //    item=[2H] rest=[1H 3H 4H]
             // ]
             // completed = []
             //
-            // while loop on next.pop(): ...
+            // while let Some((sequence, rest)) = next.pop():
             //
             // loop(item=[2H] rest=[1H 3H 4H]):
-            //   starting + ending continuations (singleton, append):
+            //   continuations (2H):
             //     2H.sequence(1H) -> []
             //     2H.sequence(3H) -> item=[2H, 3H] rest=[1H, 4H]
             //     2H.sequence(4H) -> []
@@ -217,33 +229,60 @@ impl Sequence {
             //   completed = []
             //
             //  loop(item=[2H, 3H] rest=[1H, 4H]):
-            //    starting continuations (prepend):
-            //      1H.sequence(2H) -> [1H, 2H] -> item=[1H, 2H, 3H] rest=[4H]
-            //      4H.sequence(2H) -> []
-            //    ending continuations (append):
+            //    continuations (3H):
             //      3H.sequence(1H) -> []
             //      3H.sequence(4H) -> [3H, 4H] -> item=[2H, 3H, 4H] rest=[1H]
             //    next = [
             //      item=[2H, 3H, 4H] rest=[1H]
-            //      item=[1H, 2H, 3H] rest=[4H]
             //    ]
             //    completed = [
             //      item=[2H, 3H, 4H] rest=[1H]
-            //      item=[1H, 2H, 3H] rest=[4H]
             //    ]
             //
             // loop(item=[2H, 3H, 4H] rest=[1H]):
-            //   starting continuations (prepend):
-            //     1H.sequence(2H) -> [1H, 2H, 3H, 4H] -> item=[1H, 2H, 3H, 4H] rest=[4H]
             //   ending continuations:
             //     4H.sequence(1H) -> []
-            //   next = [
-            //     item=[1H, 2H, 3H] rest=[4H]
-            //   ]
+            //   next = []
             //   completed = [
             //      item=[2H, 3H, 4H] rest=[1H]
-            //      item=[1H, 2H, 3H] rest=[4H]
-            //      item=[1H, 2H, 3H, 4H] rest=[]
+            //   ]
+            //
+            // example:
+            // --------
+            // next = [
+            //    item=[2H] rest=[1H 3H 4H]
+            // ]
+            // completed = []
+            //
+            // while let Some((sequence, rest)) = next.pop():
+            //
+            // loop(item=[2H] rest=[1H 3H 4H]):
+            //   continuations (2H):
+            //     2H.sequence(1H) -> []
+            //     2H.sequence(3H) -> item=[2H, 3H] rest=[1H, 4H]
+            //     2H.sequence(4H) -> []
+            //   next = [
+            //     item=[2H, 3H] rest=[1H, 4H]
+            //   ]
+            //   completed = []
+            //
+            //  loop(item=[2H, 3H] rest=[1H, 4H]):
+            //    continuations (3H):
+            //      3H.sequence(1H) -> []
+            //      3H.sequence(4H) -> [3H, 4H] -> item=[2H, 3H, 4H] rest=[1H]
+            //    next = [
+            //      item=[2H, 3H, 4H] rest=[1H]
+            //    ]
+            //    completed = [
+            //      item=[2H, 3H, 4H] rest=[1H]
+            //    ]
+            //
+            // loop(item=[2H, 3H, 4H] rest=[1H]):
+            //   ending continuations:
+            //     4H.sequence(1H) -> []
+            //   next = []
+            //   completed = [
+            //      item=[2H, 3H, 4H] rest=[1H]
             //   ]
         }
         todo!()
