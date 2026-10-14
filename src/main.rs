@@ -1,5 +1,15 @@
 use rand::prelude::SliceRandom;
+use serde::Serialize;
 use strum::{EnumIter, IntoEnumIterator};
+
+#[derive(Debug, Serialize)]
+struct SearchCandidateTrace {
+    current_sequence: Vec<String>,
+    candidate: String,
+    same_suit: bool,
+    consecutive: bool,
+    valid: bool,
+}
 
 #[derive(EnumIter, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Suit {
@@ -77,19 +87,6 @@ impl Deck {
     }
 }
 
-fn main() {
-    let mut deck = Deck::new();
-    deck.shuffle();
-    let drawn = &deck.draw(13);
-    let found = FoundSequence::find(&drawn);
-
-    println!("cards drawn: {:?}", &drawn);
-    println!("===");
-    println!("remaining deck: {:?}", &deck);
-    println!("===");
-    println!("found sequences: {:?}", &found);
-}
-
 impl Card {
     fn rank(&self) -> Option<Rank> {
         match self {
@@ -105,6 +102,10 @@ impl Card {
         }
     }
 
+    fn is_joker(&self) -> bool {
+        matches!(self, Card::Joker)
+    }
+
     fn sequence(&self, next: &Card) -> bool {
         match self {
             Card::Card((suit, rank)) => {
@@ -112,9 +113,9 @@ impl Card {
                 let matches_rank: bool = next
                     .rank()
                     .is_some_and(|next_rank| rank.continuations() == next_rank);
-                matches_suit && matches_rank
+                (matches_suit && matches_rank) // TODO: || next.is_joker()
             }
-            Card::Joker => true,
+            Card::Joker => false, // TODO: true,
         }
     }
 }
@@ -154,6 +155,18 @@ impl FoundSequence {
                                 // found sequence indexes
                                 let mut found = used.clone();
                                 found.push(next);
+
+                                // make sure all suits are consistent
+                                let mut suits: Vec<Suit> =
+                                    found.iter().filter_map(|idx| cards[*idx].suit()).collect();
+                                suits.sort();
+                                suits.dedup();
+                                if suits.len() != 1 {
+                                    continue;
+                                }
+
+                                // TODO: ensure 3 <joker> 5 is accepted
+                                // TODO: ensure 3 <joker> 10 is rejected
 
                                 // populate found sequence struct from indexes
                                 let mut sequence = vec![];
@@ -197,9 +210,22 @@ impl FoundSequence {
     }
 }
 
+fn main() {
+    let mut deck = Deck::new();
+    deck.shuffle();
+    let drawn = &deck.draw(13);
+    let found = FoundSequence::find(&drawn);
+
+    println!("cards drawn: {:?}", &drawn);
+    println!("===");
+    println!("remaining deck: {:?}", &deck);
+    println!("===");
+    println!("found sequences: {:?}", &found);
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{Card, Card::*, FoundSequence::*, Rank, Rank::*, Suit::*};
+    use crate::{Card, Card::*, FoundSequence, FoundSequence::*, Rank, Rank::*, Suit::*};
 
     #[test]
     fn test_find_sequence() {
